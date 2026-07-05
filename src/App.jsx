@@ -12,10 +12,7 @@ function App() {
   const [user, setUser] = useState(null); 
   const [machines, setMachines] = useState([]); 
   const [selectedMachine, setSelectedMachine] = useState('');
-  
   const [mercadopagoToken, setMercadopagoToken] = useState('');
-  
-  // NUEVO: Estado para el inventario
   const [inventory, setInventory] = useState([]);
 
   const fetchMachines = async (userId) => {
@@ -26,25 +23,18 @@ function App() {
         setMachines(data.maquinas);
         if (data.maquinas.length > 0) {
           setSelectedMachine(data.maquinas[0].machine_id);
-          fetchInventory(data.maquinas[0].machine_id); // Cargamos el inventario de la primera máquina
+          fetchInventory(data.maquinas[0].machine_id);
         }
       }
-    } catch (error) {
-      console.error("Error cargando máquinas");
-    }
+    } catch (error) { console.error("Error cargando máquinas"); }
   };
 
-  // NUEVO: Función para traer el inventario de la BD
   const fetchInventory = async (machineId) => {
     try {
       const response = await fetch(`https://vending-api-server.onrender.com/api/inventario/${machineId}`);
       const data = await response.json();
-      if (data.success) {
-        setInventory(data.inventario);
-      }
-    } catch (error) {
-      console.error("Error cargando inventario");
-    }
+      if (data.success) setInventory(data.inventario);
+    } catch (error) { console.error("Error cargando inventario"); }
   };
 
   const handleMachineChange = (e) => {
@@ -57,7 +47,6 @@ function App() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     try {
       const response = await fetch('https://vending-api-server.onrender.com/api/login', {
         method: 'POST',
@@ -65,23 +54,17 @@ function App() {
         body: JSON.stringify({ email, password })
       });
       const data = await response.json();
-      
       if (data.success) {
         setUser(data.user); 
         fetchMachines(data.user.id); 
         setView('dashboard');
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      setError('Error de conexión con el servidor.');
-    } finally {
-      setIsLoading(false);
-    }
+      } else setError(data.message);
+    } catch (err) { setError('Error de conexión.'); } 
+    finally { setIsLoading(false); }
   };
 
   const handleSaveConfig = async () => {
-    if (!mercadopagoToken) return alert("Por favor, ingresa tu Access Token.");
+    if (!mercadopagoToken) return alert("Ingresa tu Access Token.");
     setIsLoading(true);
     try {
       const response = await fetch('https://vending-api-server.onrender.com/api/config/pagos', {
@@ -90,21 +73,19 @@ function App() {
         body: JSON.stringify({ id_dueno: user.id, token: mercadopagoToken })
       });
       const data = await response.json();
-      if (data.success) {
-        alert('¡Llave de Mercado Pago guardada exitosamente!');
-        setMercadopagoToken('');
-      } else alert('Error: ' + data.message);
+      if (data.success) { alert('¡Llave guardada!'); setMercadopagoToken(''); } 
+      else alert('Error: ' + data.message);
     } catch (err) { alert('Error de conexión.'); } 
     finally { setIsLoading(false); }
   };
 
-  // NUEVO: Función para actualizar un producto en la BD
-  const handleUpdateProduct = async (codigo_motor, currentPrecio, currentStock) => {
-    const nuevoPrecio = prompt(`Nuevo precio para el motor ${codigo_motor} (Ej: 2.50):`, currentPrecio);
-    if (nuevoPrecio === null) return; 
+  // ACTUALIZADO: Ahora editamos Nombre y Precio
+  const handleUpdateProduct = async (codigo_motor, currentName, currentPrecio) => {
+    const nuevoNombre = prompt(`Nombre del producto en el motor ${codigo_motor}:`, currentName || '');
+    if (nuevoNombre === null) return; 
 
-    const nuevoStock = prompt(`Nuevo stock para el motor ${codigo_motor}:`, currentStock);
-    if (nuevoStock === null) return;
+    const nuevoPrecio = prompt(`Precio para ${nuevoNombre || 'este producto'} (Ej: 2.50):`, currentPrecio || '0.00');
+    if (nuevoPrecio === null || isNaN(parseFloat(nuevoPrecio))) return alert("Precio inválido.");
 
     try {
       const response = await fetch('https://vending-api-server.onrender.com/api/inventario/actualizar', {
@@ -113,20 +94,59 @@ function App() {
         body: JSON.stringify({ 
           machine_id: selectedMachine, 
           codigo_motor: codigo_motor, 
-          precio: parseFloat(nuevoPrecio), 
-          stock: parseInt(nuevoStock) 
+          nombre_producto: nuevoNombre,
+          precio: parseFloat(nuevoPrecio)
         })
       });
       const data = await response.json();
       if (data.success) {
-        alert('¡Producto actualizado!');
-        fetchInventory(selectedMachine); // Refresca la tabla automáticamente
-      } else {
-        alert('Error al actualizar.');
-      }
-    } catch (error) {
-      alert('Error de conexión.');
-    }
+        fetchInventory(selectedMachine); 
+      } else alert('Error al actualizar.');
+    } catch (error) { alert('Error de conexión.'); }
+  };
+
+  // NUEVO: Generador dinámico de la cuadrícula 6x6 (Filas 1-6, Columnas 0-5)
+  const renderPlanogram = () => {
+    const rows = [1, 2, 3, 4, 5, 6];
+    const cols = [0, 1, 2, 3, 4, 5];
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-gray-100 rounded-xl">
+        {rows.map(row => (
+          cols.map(col => {
+            const code = `${row}${col}`; // Ej: "10", "11", "25", etc.
+            const item = inventory.find(i => i.codigo_motor === code);
+            
+            return (
+              <div key={code} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative">
+                {/* Cabecera del Motor */}
+                <div className="bg-gray-800 text-white text-center font-mono font-bold py-1.5 text-sm">
+                  {code}
+                </div>
+                
+                {/* Cuerpo del Producto */}
+                <div className="p-3 flex-grow flex flex-col justify-center items-center text-center">
+                  <p className="text-sm font-semibold text-gray-800 line-clamp-2 min-h-[40px]">
+                    {item && item.nombre_producto ? item.nombre_producto : <span className="text-gray-400 italic">Vacío</span>}
+                  </p>
+                  <p className="text-blue-600 font-bold mt-1 text-lg">
+                    {item && item.precio ? `S/ ${Number(item.precio).toFixed(2)}` : '-'}
+                  </p>
+                </div>
+                
+                {/* Botón de Acción */}
+                <button 
+                  onClick={() => handleUpdateProduct(code, item?.nombre_producto, item?.precio)}
+                  className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-2 text-xs border-t border-gray-100 transition-colors"
+                >
+                  Editar Motor
+                </button>
+              </div>
+            );
+          })
+        ))}
+      </div>
+    );
   };
 
   if (view === 'login') {
@@ -162,13 +182,14 @@ function App() {
             {user?.rol === 'superadmin' ? '👑 Súper Admin:' : 'Hola,'} {user?.nombre}
           </span>
           <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}>Dashboard</button>
-          <button onClick={() => setActiveTab('inventario')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap ${activeTab === 'inventario' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}>Mi Inventario</button>
+          <button onClick={() => setActiveTab('inventario')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap ${activeTab === 'inventario' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}>Mi Planograma</button>
           <button onClick={() => setActiveTab('config')} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap ${activeTab === 'config' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}>Config. Pagos</button>
           <button onClick={() => { setView('login'); setUser(null); setEmail(''); setPassword(''); }} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Salir</button>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto p-6">
+        {/* ... (Pestaña de Dashboard se mantiene igual) ... */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -179,7 +200,7 @@ function App() {
             </div>
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                <h3 className="text-lg font-bold text-gray-800">{user?.rol === 'superadmin' ? 'Monitoreo Global' : 'Estado de la Flota'}</h3>
+                <h3 className="text-lg font-bold text-gray-800">Estado de la Flota</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
@@ -205,14 +226,18 @@ function App() {
           </div>
         )}
 
+        {/* NUEVA PESTAÑA DE PLANOGRAMA */}
         {activeTab === 'inventario' && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
-              <h3 className="text-lg font-bold text-gray-800">Gestión de Inventario</h3>
+            <div className="px-6 py-5 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Planograma 6x6</h3>
+                <p className="text-sm text-gray-500 mt-1">Configura los precios y productos de tu máquina. El stock se actualiza automáticamente.</p>
+              </div>
               <select 
                 value={selectedMachine} 
                 onChange={handleMachineChange} 
-                className="p-2 border border-gray-300 rounded-lg bg-white font-mono text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="p-2.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
               >
                 {machines.map((machine) => (
                   <option key={machine.id} value={machine.machine_id}>{machine.machine_id} - {machine.ubicacion}</option>
@@ -220,46 +245,13 @@ function App() {
               </select>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700 text-xs uppercase font-bold tracking-wider">
-                    <th className="px-6 py-4">Motor</th>
-                    <th className="px-6 py-4">Producto</th>
-                    <th className="px-6 py-4">Precio (S/)</th>
-                    <th className="px-6 py-4">Stock</th>
-                    <th className="px-6 py-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {inventory.length === 0 ? (
-                    <tr><td colSpan="5" className="px-6 py-4 text-center text-gray-500">Cargando inventario o máquina vacía...</td></tr>
-                  ) : (
-                    inventory.map((item) => (
-                      <tr key={item.codigo_motor} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 font-mono font-bold text-gray-700">{item.codigo_motor}</td>
-                        <td className="px-6 py-4 font-medium">{item.nombre_producto}</td>
-                        <td className="px-6 py-4 text-blue-600 font-bold">S/ {Number(item.precio).toFixed(2)}</td>
-                        <td className="px-6 py-4">
-                          <span className={`font-bold ${item.stock > 5 ? 'text-green-600' : 'text-red-500'}`}>{item.stock}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button 
-                            onClick={() => handleUpdateProduct(item.codigo_motor, item.precio, item.stock)}
-                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold py-1.5 px-4 rounded-lg text-sm transition-colors"
-                          >
-                            Editar
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {/* Aquí inyectamos la matriz de 36 espacios */}
+            {renderPlanogram()}
+            
           </div>
         )}
 
+        {/* ... (Pestaña de Configuración se mantiene igual) ... */}
         {activeTab === 'config' && (
           <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
              <h2 className="text-2xl font-bold mb-2 text-gray-800">Configuración de Pasarela</h2>
