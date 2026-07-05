@@ -86,7 +86,9 @@ function App() {
 
     const nuevoPrecio = prompt(`Precio para ${nuevoNombre || 'este producto'} (Ej: 2.50):`, currentPrecio || '0.00');
     if (nuevoPrecio === null || isNaN(parseFloat(nuevoPrecio))) return alert("Precio inválido.");
-
+  // NUEVO: Preguntamos cuántas unidades físicas metió en la máquina
+    const nuevoStock = prompt(`¿Cuántas unidades de ${nuevoNombre} pusiste en el motor ${codigo_motor}?`, '10');
+    if (nuevoStock === null || isNaN(parseInt(nuevoStock))) return alert("Stock inválido.");
     try {
       const response = await fetch('https://vending-api-server.onrender.com/api/inventario/actualizar', {
         method: 'PUT',
@@ -95,7 +97,8 @@ function App() {
           machine_id: selectedMachine, 
           codigo_motor: codigo_motor, 
           nombre_producto: nuevoNombre,
-          precio: parseFloat(nuevoPrecio)
+          precio: parseFloat(nuevoPrecio),
+          stock: parseInt(nuevoStock) // Enviamos el nuevo stock a la BD
         })
       });
       const data = await response.json();
