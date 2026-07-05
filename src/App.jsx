@@ -80,15 +80,17 @@ function App() {
   };
 
   // ACTUALIZADO: Ahora editamos Nombre y Precio
-  const handleUpdateProduct = async (codigo_motor, currentName, currentPrecio) => {
+const handleUpdateProduct = async (codigo_motor, currentName, currentPrecio, currentStock) => {
     const nuevoNombre = prompt(`Nombre del producto en el motor ${codigo_motor}:`, currentName || '');
     if (nuevoNombre === null) return; 
 
     const nuevoPrecio = prompt(`Precio para ${nuevoNombre || 'este producto'} (Ej: 2.50):`, currentPrecio || '0.00');
     if (nuevoPrecio === null || isNaN(parseFloat(nuevoPrecio))) return alert("Precio inválido.");
-  // NUEVO: Preguntamos cuántas unidades físicas metió en la máquina
-    const nuevoStock = prompt(`¿Cuántas unidades de ${nuevoNombre} pusiste en el motor ${codigo_motor}?`, '10');
+
+    // Le pasamos el stock actual como valor por defecto (o '0' si es nuevo)
+    const nuevoStock = prompt(`¿Cuántas unidades de ${nuevoNombre} hay en el motor ${codigo_motor}?`, currentStock || '0');
     if (nuevoStock === null || isNaN(parseInt(nuevoStock))) return alert("Stock inválido.");
+
     try {
       const response = await fetch('https://vending-api-server.onrender.com/api/inventario/actualizar', {
         method: 'PUT',
@@ -98,7 +100,7 @@ function App() {
           codigo_motor: codigo_motor, 
           nombre_producto: nuevoNombre,
           precio: parseFloat(nuevoPrecio),
-          stock: parseInt(nuevoStock) // Enviamos el nuevo stock a la BD
+          stock: parseInt(nuevoStock)
         })
       });
       const data = await response.json();
@@ -107,8 +109,8 @@ function App() {
       } else alert('Error al actualizar.');
     } catch (error) { alert('Error de conexión.'); }
   };
-
   // NUEVO: Generador dinámico de la cuadrícula 6x6 (Filas 1-6, Columnas 0-5)
+// Generador dinámico de la cuadrícula 6x6 (Filas 1-6, Columnas 0-5)
   const renderPlanogram = () => {
     const rows = [1, 2, 3, 4, 5, 6];
     const cols = [0, 1, 2, 3, 4, 5];
@@ -135,11 +137,17 @@ function App() {
                   <p className="text-blue-600 font-bold mt-1 text-lg">
                     {item && item.precio ? `S/ ${Number(item.precio).toFixed(2)}` : '-'}
                   </p>
+                  {/* NUEVO: Indicador de Stock */}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Stock: <span className={`font-bold ${item && item.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {item && item.stock !== undefined ? item.stock : 0}
+                    </span>
+                  </p>
                 </div>
                 
-                {/* Botón de Acción */}
+                {/* Botón de Acción (Ahora envía también el stock actual) */}
                 <button 
-                  onClick={() => handleUpdateProduct(code, item?.nombre_producto, item?.precio)}
+                  onClick={() => handleUpdateProduct(code, item?.nombre_producto, item?.precio, item?.stock)}
                   className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-2 text-xs border-t border-gray-100 transition-colors"
                 >
                   Editar Motor
