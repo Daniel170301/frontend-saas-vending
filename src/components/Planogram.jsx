@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Edit2, Save, X, Loader2, PackageOpen, LayoutGrid } from 'lucide-react';
+import { Edit2, Save, X, Loader2, PackageOpen, LayoutGrid, RotateCcw } from 'lucide-react';
 
 export default function Planogram({ machines, selectedMachine, handleMachineChange, inventory, fetchInventory }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -9,6 +9,9 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
   const [isUpdating, setIsUpdating] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://vending-api-server.onrender.com/api';
+
+  const rows = [1, 2, 3, 4, 5, 6];
+  const cols = [0, 1, 2, 3, 4, 5];
 
   const openModal = (code, item) => {
     setEditingCode(code);
@@ -52,8 +55,45 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
     }
   };
 
-  const rows = [1, 2, 3, 4, 5, 6];
-  const cols = [0, 1, 2, 3, 4, 5];
+  // NUEVA FUNCIÓN: Reiniciar todo el inventario
+  const handleResetInventory = async () => {
+    const confirmar = window.confirm("¿Estás seguro de reiniciar TODOS los 36 motores? Los productos pasarán a llamarse 'Producto X' costando 1.00 sol con stock 0. Esta acción no se puede deshacer.");
+    if (!confirmar) return;
+
+    setIsUpdating(true);
+    const toastId = toast.loading('Reiniciando 36 motores, por favor no cierres la ventana...');
+
+    try {
+      let contador = 1;
+      
+      // Recorremos las 6 filas y 6 columnas (36 peticiones)
+      for (const row of rows) {
+        for (const col of cols) {
+          const code = `${row}${col}`;
+          
+          await fetch(`${API_BASE_URL}/inventario/actualizar`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              machine_id: selectedMachine,
+              codigo_motor: code,
+              nombre_producto: `Producto ${contador}`,
+              precio: 1.00,
+              stock: 0
+            })
+          });
+          contador++;
+        }
+      }
+      
+      toast.success('¡Máquina reiniciada con éxito!', { id: toastId });
+      fetchInventory(selectedMachine); // Recargamos el planograma
+    } catch (error) {
+      toast.error('Hubo un error al reiniciar algunos motores', { id: toastId });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   if (!machines || machines.length === 0) {
     return (
@@ -67,7 +107,7 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50">
+      <div className="px-6 py-5 border-b border-gray-200 flex flex-col lg:flex-row justify-between items-center gap-4 bg-gray-50">
         <div>
           <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <LayoutGrid className="text-blue-600" size={24} />
@@ -75,14 +115,25 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
           </h3>
           <p className="text-sm text-gray-500 mt-1">Configura los precios y productos de tu máquina actual.</p>
         </div>
-        <div className="w-full md:w-auto">
-          <select value={selectedMachine} onChange={handleMachineChange} className="w-full md:w-64 p-2.5 border border-gray-300 rounded-lg bg-white font-mono text-sm outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+        
+        <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-3">
+          <select value={selectedMachine} onChange={handleMachineChange} disabled={isUpdating} className="w-full sm:w-64 p-2.5 border border-gray-300 rounded-lg bg-white font-mono text-sm outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer disabled:opacity-50">
             {machines.map((machine) => (
               <option key={machine.machine_id} value={machine.machine_id}>
                 ID: {machine.machine_id} - {machine.ubicacion || 'Sin ubicación'}
               </option>
             ))}
           </select>
+          
+          {/* NUEVO BOTÓN DE REINICIO */}
+          <button 
+            onClick={handleResetInventory} 
+            disabled={isUpdating}
+            className="flex items-center justify-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap disabled:opacity-50"
+          >
+            {isUpdating ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
+            Reiniciar a 1 Sol
+          </button>
         </div>
       </div>
 
@@ -119,7 +170,8 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
                 </div>
                 <button
                   onClick={() => openModal(code, item)}
-                  className="w-full bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 font-semibold py-2.5 text-xs border-t border-gray-100 transition-colors flex items-center justify-center gap-1.5"
+                  disabled={isUpdating}
+                  className="w-full bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 font-semibold py-2.5 text-xs border-t border-gray-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
                   <Edit2 size={14} />
                   Editar Motor
