@@ -7,7 +7,8 @@ import {
   LogOut, 
   Loader2, 
   VendingMachine,
-  User
+  User,
+  Save // <-- ¡Esta es la que faltaba!
 } from 'lucide-react';
 import Planogram from './components/Planogram';
 
