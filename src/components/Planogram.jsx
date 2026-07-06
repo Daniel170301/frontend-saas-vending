@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { Edit2, Save, X, Loader2, PackageOpen, LayoutGrid } from 'lucide-react';
 
 export default function Planogram({ machines, selectedMachine, handleMachineChange, inventory, fetchInventory }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,7 +39,7 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
       
       const data = await response.json();
       if (data.success) {
-        toast.success('Motor actualizado correctamente');
+        toast.success(`Motor ${editingCode} actualizado correctamente`);
         fetchInventory(selectedMachine);
         setIsModalOpen(false);
       } else {
@@ -54,47 +55,73 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
   const rows = [1, 2, 3, 4, 5, 6];
   const cols = [0, 1, 2, 3, 4, 5];
 
+  if (!machines || machines.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+        <LayoutGrid className="mx-auto text-gray-300 mb-4" size={48} />
+        <h3 className="text-xl font-bold text-gray-800">Planograma no disponible</h3>
+        <p className="text-gray-500 mt-2">Registra una máquina para comenzar a configurar su inventario y precios.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="px-6 py-5 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50">
         <div>
-          <h3 className="text-xl font-bold text-gray-800">Planograma 6x6</h3>
-          <p className="text-sm text-gray-500 mt-1">Configura los precios y productos de tu máquina.</p>
+          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <LayoutGrid className="text-blue-600" size={24} />
+            Planograma Visual
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">Configura los precios y productos de tu máquina actual.</p>
         </div>
-        <select value={selectedMachine} onChange={handleMachineChange} className="p-2.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm outline-none focus:ring-2 focus:ring-blue-500">
-          {machines.map((machine) => (
-            <option key={machine.machine_id} value={machine.machine_id}>
-              {machine.machine_id} - {machine.ubicacion}
-            </option>
-          ))}
-        </select>
+        <div className="w-full md:w-auto">
+          <select value={selectedMachine} onChange={handleMachineChange} className="w-full md:w-64 p-2.5 border border-gray-300 rounded-lg bg-white font-mono text-sm outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer">
+            {machines.map((machine) => (
+              <option key={machine.machine_id} value={machine.machine_id}>
+                ID: {machine.machine_id} - {machine.ubicacion || 'Sin ubicación'}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-gray-100 rounded-xl">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 p-6 bg-gray-100/50">
         {rows.map(row => (
           cols.map(col => {
             const code = `${row}${col}`;
             const item = inventory.find(i => i.codigo_motor === code);
+            const isOutOFStock = item && item.stock <= 0;
+            
             return (
-              <div key={code} className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden relative">
-                <div className="bg-gray-800 text-white text-center font-mono font-bold py-1.5 text-sm">{code}</div>
+              <div key={code} className={`bg-white border rounded-xl shadow-sm flex flex-col overflow-hidden relative transition-all hover:shadow-md hover:border-blue-200 ${isOutOFStock ? 'border-red-200' : 'border-gray-200'}`}>
+                <div className={`text-white text-center font-mono font-bold py-1.5 text-sm ${isOutOFStock ? 'bg-red-500' : 'bg-gray-800'}`}>
+                  {code}
+                </div>
                 <div className="p-3 flex-grow flex flex-col justify-center items-center text-center">
-                  <p className="text-sm font-semibold text-gray-800 line-clamp-2 min-h-[40px]">
-                    {item && item.nombre_producto ? item.nombre_producto : <span className="text-gray-400 italic">Vacío</span>}
+                  <p className="text-sm font-semibold text-gray-800 line-clamp-2 min-h-[40px] flex items-center justify-center">
+                    {item && item.nombre_producto ? (
+                      item.nombre_producto
+                    ) : (
+                      <span className="text-gray-400 italic flex items-center gap-1 text-xs">
+                        <PackageOpen size={14} /> Vacío
+                      </span>
+                    )}
                   </p>
-                  <p className="text-blue-600 font-bold mt-1 text-lg">
+                  <p className="text-blue-600 font-bold mt-2 text-lg bg-blue-50 px-2 py-0.5 rounded-md w-full">
                     {item && item.precio ? `S/ ${Number(item.precio).toFixed(2)}` : '--'}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Stock: <span className={`font-bold ${item && item.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Stock: <span className={`font-bold px-1.5 py-0.5 rounded ${item && item.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {item && item.stock !== undefined ? item.stock : 0}
                     </span>
                   </p>
                 </div>
                 <button
                   onClick={() => openModal(code, item)}
-                  className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-2 text-xs border-t border-gray-100 transition-colors"
+                  className="w-full bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 font-semibold py-2.5 text-xs border-t border-gray-100 transition-colors flex items-center justify-center gap-1.5"
                 >
+                  <Edit2 size={14} />
                   Editar Motor
                 </button>
               </div>
@@ -103,30 +130,42 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
         ))}
       </div>
 
-      {/* MODAL MODERNO */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Editar Motor {editingCode}</h3>
-            <form onSubmit={handleUpdateProduct} className="space-y-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Edit2 size={18} className="text-blue-600" />
+                Motor {editingCode}
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateProduct} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre del Producto</label>
-                <input type="text" value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required />
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre del Producto</label>
+                <input type="text" value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Ej: Coca Cola 500ml" required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Precio (S/)</label>
-                  <input type="number" step="0.01" value={formData.precio} onChange={(e) => setFormData({...formData, precio: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Precio (S/)</label>
+                  <input type="number" step="0.01" min="0" value={formData.precio} onChange={(e) => setFormData({...formData, precio: e.target.value})} className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="0.00" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Stock</label>
-                  <input type="number" value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Stock</label>
+                  <input type="number" min="0" value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})} className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="0" required />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200">Cancelar</button>
-                <button type="submit" disabled={isUpdating} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">
-                  {isUpdating ? 'Guardando...' : 'Guardar'}
+              
+              <div className="flex gap-3 pt-4 mt-2 border-t border-gray-100">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={isUpdating} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex justify-center items-center gap-2">
+                  {isUpdating ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                  {isUpdating ? 'Guardando' : 'Guardar'}
                 </button>
               </div>
             </form>
