@@ -6,9 +6,9 @@ import {
   Settings, 
   LogOut, 
   Loader2, 
-  VendingMachine,
+  Store,
   User,
-  Save // <-- ¡Esta es la que faltaba!
+  Save, // <-- ¡Esta es la que faltaba!
 } from 'lucide-react';
 import Planogram from './components/Planogram';
 
@@ -115,7 +115,7 @@ function App() {
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
           <div className="flex justify-center mb-6">
             <div className="bg-blue-100 p-3 rounded-full text-blue-600">
-              <VendingMachine size={40} />
+              <Store size={40} />
             </div>
           </div>
           <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">Smart Vending SaaS</h2>
@@ -143,7 +143,7 @@ function App() {
       <Toaster position="top-right" />
       <nav className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm flex-wrap gap-4">
         <div className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <VendingMachine className="text-blue-600" />
+          <Store className="text-blue-600" />
           Smart Vending
         </div>
         <div className="flex items-center space-x-2 md:space-x-4 overflow-x-auto">
@@ -181,7 +181,7 @@ function App() {
             {machines.length === 0 ? (
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 flex flex-col items-center justify-center text-center">
                 <div className="bg-gray-50 p-4 rounded-full mb-4">
-                  <VendingMachine size={48} className="text-gray-400" />
+                  <Store size={48} className="text-gray-400" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-800">Aún no tienes máquinas</h3>
                 <p className="text-gray-500 mt-2 max-w-sm">No hay máquinas registradas en tu cuenta actualmente. Registra tu primera máquina para verla aquí.</p>
