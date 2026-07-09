@@ -141,7 +141,7 @@ export default function Planogram({ machines, selectedMachine, handleMachineChan
         {rows.map(row => (
           cols.map(col => {
             const code = `${row}${col}`;
-            const item = inventory.find(i => i.codigo_motor === code);
+            const item = inventory.find(i => String(i.codigo_motor) === String(code));
             const isOutOFStock = item && item.stock <= 0;
             
             return (
