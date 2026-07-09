@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { LayoutDashboard, Grid3X3, FileText, Logout, Store, User, Settings } from 'lucide-react';
+import { LayoutDashboard, Grid3X3, FileText, LogOut, Store, User, Settings } from 'lucide-react';
 
 // Importamos nuestros nuevos componentes modulares
 import Login from './components/Login';
@@ -97,7 +97,7 @@ export default function App() {
           </button>
           
           <button onClick={() => { setView('login'); setUser(null); }} className="flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ml-2">
-            <Logout size={18} /> Salir
+            <LogOut size={18} /> Salir
           </button>
         </div>
       </nav>
